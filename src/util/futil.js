@@ -23,7 +23,10 @@ function capitalized(string) {
 }
 function justPostJSON(json) {
     let r = new Request("/", { method: "POST", body: json });
-    fetch(r);
+    return fetch(r);
+}
+function assemble(n, f) {
+    return [].concat(...[...Array(n).keys()].map(f));
 }
 
-export {createStyle, insertStyle, appendCss, loadScript, capitalized, justPostJSON}
+export {createStyle, insertStyle, appendCss, loadScript, capitalized, justPostJSON, assemble};

@@ -1,7 +1,13 @@
 import simpleClass from '../simpleClass';
-import {assert} from './test';
 
 let Box = simpleClass("x, y, width, height".split(", "));
+
+Box.prototype.size = function(width, height) {
+    let c = this.clone();
+    c._width = width;
+    c._height = height;
+    return c
+}
 
 Box.prototype.T = function() {
     return Box(this._y, this._x, this._height, this._width);
@@ -13,13 +19,24 @@ Box.prototype.contains = function([x, y]) {
 
     return 0 <= dx && dx <= this._width &&
            0 <= dy && dy <= this._height;
-}
+};
+
+Box.prototype.fitPoint = function([xx, yy]) {
+    let [x, y] = [xx, yy];
+    let dx = xx - this._x;
+    let dy = yy - this._y;
+    if (dx < 0) x = this._x;
+    if (dy < 0) y = this._y;
+    if (dx > this._width)  x = this._x + this._width;
+    if (dy > this._height) y = this._y + this._height;
+    return [x, y];
+};
 
 Box.prototype.getFractionalPosition = function ([posx, posy]) {
     var x = posx - this._x;
     var y = posy - this._y;
     return [x / this._width, y / this._height]
-}
+};
 
 Box.prototype.fitBox = function(box) {
     let frame = this;
@@ -45,13 +62,6 @@ Box.prototype.fitBox = function(box) {
         sub = sub.T();
     }
     return sub;
-}
+};
 
-function test_fitBox() {
-    var frame = new Box().x(0).y(0).width(2000).height(1000);
-    var box = frame.width(500);
-    var res = box.x(750);
-    assert("test_fitBox(1)", frame.fitBox(box), res, (a, b) => a.equal(b));
-}
-
-export {Box, test_fitBox};
+export default Box;

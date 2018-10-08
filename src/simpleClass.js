@@ -51,7 +51,8 @@ import {ValueError} from "./error";
  *  }}}
  */
 
-let simpleClass = (properties, defaults=undefined) => {
+/* function parametres CHNGD 2018-10-08 */ 
+let simpleClass = (properties, parentClass=undefined, defaults=undefined) => {
     if (defaults === undefined) {
         defaults = Array(properties.length);
     } else {
@@ -63,7 +64,6 @@ let simpleClass = (properties, defaults=undefined) => {
         /* ADDED 2018-10-06 */ if (!(this instanceof Class)) {
         /* ADDED 2018-10-06 */     return new Class(...args);
         /* ADDED 2018-10-06 */ }
-        /* ADDED 2018-10-06 */ this.__properties__ = properties.slice();
         let pl = properties.length;
         let al = args.length;
         let i;
@@ -83,8 +83,13 @@ let simpleClass = (properties, defaults=undefined) => {
         }
     }
 
+    /* ADDED 2018-10-06 */ if (parentClass) {
+    /* ADDED 2018-10-06 */     Class.prototype = new parentClass();
+    /* ADDED 2018-10-06 */ }
     /* ADDED 2018-10-06 */ let p = Class.prototype;
-    /* Subsequent p.{function} changed as well */
+    /* Subsequent p.{property} changed as well */
+
+    /* ADDED 2018-10-08 */ Class.__properties__ = p.__properties__ = properties.slice();
 
     // Since properties can be missing during construction
     p.simpleCheckProperties = function () {

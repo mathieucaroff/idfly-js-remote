@@ -4,7 +4,7 @@ import remoteV2 from './remoteV2';
 // DEBUG
 // document.body.innerHTML += "<p> -- OK -- </p>";
 // import simpleClass from './simpleClass';
-import {test_fitBox} from './util/cutil';
+import {test_fitBox} from './util/test_Box';
 let w = DEBUG ? window : {};
 
 test_fitBox();

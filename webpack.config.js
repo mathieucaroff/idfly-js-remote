@@ -13,9 +13,9 @@ module.exports = (env, argv) => ({
     overlay: true,
     port: 9000
   },
-  plugins: (argv.mode != "development") ? [] : [
+  plugins: [
     new webpack.DefinePlugin({
-      "DEBUG": JSON.stringify(true)
+      "DEBUG": JSON.stringify(argv.mode === "development")
     })
   ]
 });

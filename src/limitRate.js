@@ -14,7 +14,7 @@ let limitRate = (ms) => (func) => {
     function finishCoolingAndRunIfNeeded() {
         __cooling__ = false;
         if (__must_run__) {
-            func(__last_args__);
+            func(...__last_args__);
             __must_run__ = false;
             __cooling__ = true;
             setTimeout(finishCoolingAndRunIfNeeded, ms);

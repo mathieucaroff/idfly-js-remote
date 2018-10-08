@@ -1,5 +1,7 @@
+import crel from 'crel';
+
 import {appendCss, capitalized, justPostJSON} from './util/futil';
-import cssnormalize from './asset/cssnormalize';
+import * as cssnormalize from './asset/cssnormalize';
 import {gradientFCA1B, gradientECA} from './asset/colorGradient';
 
 export default function () {
@@ -41,7 +43,16 @@ body {
 }
 `);
 
-appendCss(cssnormalize);
+let link = document.createElement("link");
+link.rel = "stylesheet";
+link.href = cssnormalize.src;
+document.body.appendChild(link);
+crel(document.body,
+    crel("link", {
+        rel: "stylesheet",
+        href: cssnormalize.src,
+    })
+);
 
 
 function ifSpaceOrEnter(func) {

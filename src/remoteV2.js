@@ -1,25 +1,22 @@
 import crel from 'crel';
+import Hammer from 'hammerjs';
 
 import * as font from './asset/font';
 import * as cssnormalize from './asset/cssnormalize';
-import {appendCss, assemble, capitalized, justPostJSON} from './util/futil';
+import {appendCss, assemble, capitalized} from './util/futil';
 import * as airship from './asset/airshipBlueprint';
+import Motors from './Motors';
 import Box from './util/Box';
-import limitRate from './limitRate';
 
 var el = crel.proxy;
-
-const RATE_LIMIT = 250;
 
 var w = DEBUG ? window : {};
 var d = document;
 var baseTitle = d.title;
-var html = d.body.parentElement;
+var html = d.documentElement;
 
-var motorNameArray = "forward, up, frontT, backT".split(", ");
-var stoppedMotors = {};
-motorNameArray.forEach(name => stoppedMotors[name] = 0);
-var motorDl;
+var motors;
+var hammer;
 
 export default function () {
     let css = appendCss(`
@@ -27,6 +24,7 @@ export default function () {
     html {
         ${font.css}
         background-color: rgba(127, 63, 191, 0.3);
+        font-size: x-large;
     }
     .airship.blueprint > * {
         display: block;
@@ -48,7 +46,7 @@ export default function () {
         font-weight: bold;
     }
     `);
-    let svgContainer;
+    let motorDl, svgContainer;
     el(d.body,
         css,
         el.link({
@@ -59,147 +57,138 @@ export default function () {
                 class: "info-container"
             },
             motorDl = el.dl({
-                        class: "info",
-                    },
-                    ...assemble(4, _ => [el.dt(), el.dd()]),
-            ),
+                class: "info",
+            }),
         ),
         svgContainer = el.div({
-            class: "airship blueprint hover",
+            class: "airship blueprint",
         })
     );
 
+    motors = new Motors("forward, up, frontT, backT".split(", "), motorDl);
+    motors.setCondition(_ => __clickedZone !== null);
+    hammer = new Hammer.Manager(html);
+
     airship.fetchInto(svgContainer);
 
+    w.d = d;
     w.crel = crel;
     w.el = el;
     w.Box = Box;
     w.svgContainer = svgContainer;
     w.motorDl = motorDl;
+    w.Motors = Motors;
+    w.motors = motors;
     w.airship = airship;
-    w.stoppedMotors = stoppedMotors;
 
-    writeMotorNames();
-    writeMotorValues(stoppedMotors);
-    writeMotorSentValues(stoppedMotors);
-    setMotorSpeeds(stoppedMotors);
+    // for (let evname in "mousedown mouseup mousemove touchstart touchend touchcancel touchmove".split(" ")) {
+    //    html.addEventListener(evname, _ => console.log(evname), true);
+    // }
 
-    html.addEventListener("mousedown", handleMouseDown);
-    html.addEventListener("mouseup", handleMouseUp);
-    html.addEventListener("mousemove", handleMouseMove);
+    html.addEventListener("mousedown",   handleMouseDown, true);
+    html.addEventListener("mouseup",     handleMouseUp,   true);
+    html.addEventListener("mousemove",   handleMouseMove, true);
+
+
+    html.addEventListener("touchstart",  handleMouseDown, {passive: false});
+    html.addEventListener("touchend",    handleMouseUp,   {passive: false});
+    html.addEventListener("touchcancel", handleMouseUp,   {passive: false});
+    html.addEventListener("touchmove",   handleMouseMove, {passive: false});
 };
-
-/**
- * Write motor Names to the page
- * Usually called only once.
- */
-function writeMotorNames () {
-    for (let [i, name] of motorNameArray.entries()) {
-        motorDl.children[2 * i].innerText = capitalized(name);
-    }
-}
-
-/**
- * Given an object containing values to set to motores, write the values
- * to the page.
- */
-function writeMotorValues (motors, prop="lastV") {
-    for (let [i, name] of motorNameArray.entries()) {
-        if (motors[name] !== undefined) {
-                let dd = motorDl.children[2 * i + 1]
-                dd[prop] = motors[name].toString();
-                writeMotorDd(dd);
-        }
-    }
-};
-
-function writeMotorSentValues (motors) {
-    writeMotorValues(motors, "sentV");
-};
-
-function writeMotorDd (dd) {
-    dd.innerText = `${dd.lastV} (${dd.sentV})`;
-}
-
-/**
- * Public function to set motor speed.
- */
-let setMotorSpeeds = limitRate(RATE_LIMIT)((motors) => {
-    writeMotorSentValues(motors);
-    sendMotorSpeeds(motors)
-    .catch(console.warn)
-    .then(_ => writeMotorValues(motors));
-});
 
 /**
  * Compute image location inside the window, then compute the fractional
  * position of the given point inside (or outside) that image.
  */
 function imgFractionalPos([posx, posy]) {
-    let windowbox = new Box(0, 0, window.innerWidth, window.innerHeight);
+    let windowbox = Box(0, 0, window.innerWidth, window.innerHeight);
     let imgBox = windowbox.fitBox(Box(0, 0, 1, 1));
     return imgBox.getFractionalPosition([posx, posy]);
 };
-
-function sendMotorSpeeds(motors) {
-    let json = JSON.stringify(motors);
-    console.log(json);
-    return justPostJSON(json);
-}
 
 /*** Event handlers ***/
 
 var __clickedZone = null;
 
+function evCoordinate(ev) {
+    let click;
+    let clients = e => [e.clientX, e.clientY];
+    if (ev.clientX !== undefined) {
+        return clients(ev);
+    } else {
+        try {
+            return clients(ev.touches[0]);
+        } catch (e) {
+            w.touches = ev.touches;
+        }
+    }
+}
+
+function updateHover(ev) {
+    let hover;
+    let [fx, fy] = imgFractionalPos([ev.clientX, ev.clientY]);
+    if (__clickedZone) {
+        let [ifx, ify] = __clickedZone.getFractionalPosition([fx, fy]);
+        hover = Box(0, 0, 1, 1).contains([ifx, ify]);
+    } else {
+        hover = airship.findZone([fx, fy]) !== null;
+    }
+
+    if (hover) {
+        html.classList.add("hover");
+    } else {
+        html.classList.remove("hover");
+    }
+}
+
 function handleMouseMove(ev) {
     w.ev = ev;
     //--
-    let [fx, fy] = imgFractionalPos([ev.clientX, ev.clientY]);
-    let hover;
+    updateHover(ev);
+    //--
     if (__clickedZone) {
-        let [ifx, ify] = __clickedZone.getFractionalPosition([fx, fy])
-        
-        // Handle ".hover" class
-        hover = Box(0, 0, 1, 1).contains([ifx, ify]);
+        let [fx, fy] = imgFractionalPos(evCoordinate(ev));
+        let [ifx, ify] = __clickedZone.getFractionalPosition([fx, fy]);
 
         // Handle motor speed
         const SENSITIVITY = 1.45;
-        let [ix, iy] = Box(-1, -1, 2, 2).fitPoint(
-            [ifx, ify].map(w => 2 * w - 1).map(w => SENSITIVITY * w)
-        ).map(iv => Math.round(100 * iv));
-        let motors = __clickedZone.motorSpeed([ix, iy]);
-        setMotorSpeeds(motors);
-        w.motors = motors;
+        let mousePoint = [ifx, ify].map(w => SENSITIVITY * (2 * w - 1));
+        
+        let [ix, iy] = Box(-1, -1, 2, 2)
+            .fitPoint(mousePoint)
+            .map(iv => Math.round(Motors.POWER_VALUE * iv));
+        let order = __clickedZone.motorSpeed([ix, iy]);
+        motors.setSpeed(order);
+        w.order = order;
     //--
         let ztext = `[${__clickedZone._id}]`;
         d.title =
             `${baseTitle}${ztext} (x: ${ix}, y: ${iy})`;
     } else {
-        hover = airship.findZone([fx, fy]) !== undefined;
         d.title = `${baseTitle}`;
-    }
-    if(hover) {
-        html.classList.add("hover");
-    } else {
-        html.classList.remove("hover");
     }
 };
 
 function handleMouseDown(ev) {
     w.ev = ev;
     //--
-    let [fx, fy] = imgFractionalPos([ev.clientX, ev.clientY]);
-    __clickedZone = airship.findZone([fx, fy]);
-    __clickedZone._svg.style.fill = "#CCD6FF";
     ev.preventDefault();
+    let [fx, fy] = imgFractionalPos(evCoordinate(ev));
+    __clickedZone = airship.findZone([fx, fy]);
+    if (__clickedZone) {
+        __clickedZone._svg.style.fill = "#CCD6FF";
+    }
     handleMouseMove(ev);
     //--
 };
 
 function handleMouseUp(ev) {
     w.ev = ev;
-    __clickedZone._svg.style.fill = "white";
+    if (__clickedZone) {
+        __clickedZone._svg.style.fill = "#FFF";
+    }
+    w.__clickedZone = __clickedZone;
     __clickedZone = null;
-    handleMouseMove(ev);
-    setMotorSpeeds(stoppedMotors);
+
+    motors.stop();
 };

@@ -25,6 +25,7 @@ let zoneArray = [
 ];
 
 let src = "/asset/airship-blueprint.svg";
+src = "/asset/airship-blueprint.min.svg";
 
 function fetchInto(element) {
     return fetch(src)
@@ -32,7 +33,6 @@ function fetchInto(element) {
     .then(text => {
         element.innerHTML = text;
         let all = element.querySelectorAll("circle, ellipse");
-        console.log("all.length:", all.length);
         zoneArray[0]._svg = all[1];
         zoneArray[1]._svg = all[3];
         zoneArray[2]._svg = all[0];

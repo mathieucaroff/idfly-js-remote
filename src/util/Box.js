@@ -7,7 +7,7 @@ Box.prototype.size = function(width, height) {
     c._width = width;
     c._height = height;
     return c
-}
+};
 
 Box.prototype.T = function() {
     return Box(this._y, this._x, this._height, this._width);

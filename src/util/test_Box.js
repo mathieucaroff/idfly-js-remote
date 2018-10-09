@@ -1,5 +1,5 @@
 import Box from './Box';
-import {assert} from './test';
+import {assert} from './assert';
 
 function test_fitBox() {
     var frame = new Box().x(0).y(0).width(2000).height(1000);

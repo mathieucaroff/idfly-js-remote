@@ -22,6 +22,7 @@ function capitalized(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
 function justPostJSON(json) {
+    DEBUG && console.log(json);
     let r = new Request("/", { method: "POST", body: json });
     return fetch(r);
 }

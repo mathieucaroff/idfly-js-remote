@@ -52,18 +52,17 @@ import {ValueError} from "./error";
  */
 
 /* function parametres CHNGD 2018-10-08 */ 
-let simpleClass = (properties, parentClass=undefined, defaults=undefined) => {
-    if (defaults === undefined) {
-        defaults = Array(properties.length);
-    } else {
-        // eslint-disable-next-line no-console
-        console.assert(defaults.length == properties.length);
-    }
-
-    /* CHNGD 2018-10-06 */ function Class (...args) {
-        /* ADDED 2018-10-06 */ if (!(this instanceof Class)) {
-        /* ADDED 2018-10-06 */     return new Class(...args);
-        /* ADDED 2018-10-06 */ }
+let simpleClass = (properties, parentClass=undefined, init=undefined) => {
+    function Class (...args) {
+        if (!(this instanceof Class)) {
+            return new Class(...args);
+        }
+        if (parentClass) {
+            this.prototype = new parentClass();
+        }
+        if (init) {
+            init(this);
+        }
         let pl = properties.length;
         let al = args.length;
         let i;
@@ -71,29 +70,28 @@ let simpleClass = (properties, parentClass=undefined, defaults=undefined) => {
             let prop = properties[i];
             this[`_${prop}`] = args[i];
         }
-        if (defaults === undefined) {
-            defaults = Array(properties.length);
-        } else {
-            // eslint-disable-next-line no-console
-            console.assert(defaults.length == properties.length);
-        }
-        for (; i < pl; i++) {
-            let prop = properties[i];
-            this[`_${prop}`] = defaults[i];
-        }
     }
 
-    /* ADDED 2018-10-06 */ if (parentClass) {
-    /* ADDED 2018-10-06 */     Class.prototype = new parentClass();
-    /* ADDED 2018-10-06 */ }
-    /* ADDED 2018-10-06 */ let p = Class.prototype;
-    /* Subsequent p.{property} changed as well */
+    if (parentClass) {
+        Class.prototype = new parentClass();
+    }
+    let p = Class.prototype;
 
-    /* ADDED 2018-10-08 */ Class.__properties__ = p.__properties__ = properties.slice();
+    Class.__properties__ = p.__properties__ = properties.slice();
+
+    Class.from = p.from = (initObject) => {
+        let args = [];
+        for (let prop of this.__properties__) {
+            let val = initObject[prop];
+            args.push(val);
+        }
+        let that = new Class(...args);
+        return that;
+    };
 
     // Since properties can be missing during construction
     p.simpleCheckProperties = function () {
-        /* CHNGD 2018-10-06 */ for (let prop of this.__properties__) {
+        for (let prop of this.__properties__) {
             let val = this[`_${prop}`];
             let type = typeof(val);
             if (val === undefined) {
@@ -105,15 +103,15 @@ let simpleClass = (properties, parentClass=undefined, defaults=undefined) => {
     // A clone methode using the given properties
     p.clone = function () {
         let args = [];
-        /* CHNGD 2018-10-06 */ for (let prop of this.__properties__) {
+        for (let prop of this.__properties__) {
             let val = this[`_${prop}`];
             args.push(val);
         }
         let that = new Class(...args);
         return that;
     };
-        
-    /* ADDED 2018-10-06 */ p.equal = function (other) {
+
+    p.equal = function (other) {
         let eq = true;
         for (let prop of this.__properties__) {
             eq = this[`_${prop}`] === other[`_${prop}`];
@@ -124,32 +122,6 @@ let simpleClass = (properties, parentClass=undefined, defaults=undefined) => {
         return eq;
     };
 
-    /*
-    // Since properties can be missing during construction
-    Class.prototype.simpleCheckProperties = function () {
-        for (let prop of properties) {
-            let val = this[`_${prop}`];
-            let type = typeof(val);
-            if (val === undefined) {
-                throw new ValueError(`this.${prop} (${val}(${type})) unexpected [erid93275]`);
-            }
-        }
-    };
-    /**/
-
-    /*
-    // A clone methode using the given properties
-    Class.prototype.clone = function () {
-        let args = [];
-        for (let prop of properties) {
-            let val = this[`_${prop}`];
-            args.push(val);
-        }
-        let that = new Class(...args);
-        return that;
-    }
-    /**/
-
     // Define all the setter methodes of the fluentInterface
     for (let prop of properties) {
         let prop_setter = function (val) {
@@ -158,7 +130,7 @@ let simpleClass = (properties, parentClass=undefined, defaults=undefined) => {
             return that;
         };
         p[prop] = prop_setter;
-        /* ADDED 2018-10-06 */ Class[prop] = function (...args) {
+        Class[prop] = function (...args) {
             return prop_setter.call(new Class(), ...args);
         }
     }

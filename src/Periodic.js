@@ -1,5 +1,10 @@
 import simpleClass from './simpleClass';
 
+/*
+ * Execute a function every (ms) mili-seconds, passing the given arguments and
+ * the given `this`.
+ */
+
 let Periodic = simpleClass(
     "ms, func, args, this, condition".split(", "),
     undefined,
@@ -24,7 +29,7 @@ Periodic.prototype.__setTimeout = function (func, ms) {
 };
 
 Periodic.prototype.__setNext = function () {
-    this.__setTimeout(this._ms);
+    this.__setTimeout(_ => this.__run(), this._ms);
 };
 // }}}
 
@@ -33,6 +38,7 @@ Periodic.prototype.__run = function () {
     if (this._condition()) {
         this.__call();
         this.__setTimeout(_ => this.__run(), this._ms);
+        // Should be this.__setNext();
     }
 };
 // }}}

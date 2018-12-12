@@ -16,8 +16,8 @@ let AbstractMotors = simpleClass(
 );
 
 /**
- * Object to manage informations related to the marray and to
- * remotely command them.
+ * Object to manage informations related to `marray`, the array of motors,
+ * and to remotely command them.
  */
 class Motors extends AbstractMotors {
     constructor(...args) {

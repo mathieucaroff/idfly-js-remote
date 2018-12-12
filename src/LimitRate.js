@@ -5,7 +5,13 @@ import simpleClass from './simpleClass';
  * LimitRate
  * 
  * Given a function, prevent it being executed too often by delaying
- * such executions.
+ * such executions. Some executions may be skipped. At the time the
+ * function can be executed again, the argument from the last execution
+ * request will be used.
+ * 
+ * Use `.execute()` to call the rate-limited function.
+ * The other public methods are `.force()` and `.cancel()`, to force a
+ * (managed) early execution or to cancel any scheduled execution.
  * 
  * `hot` means that the function was recently executed and should not be
  * executed again too soon.
@@ -33,7 +39,7 @@ let LimitRate = simpleClass(
 // Constructions {{{
 LimitRate.prototype.__call = function () {
     this.__pending__ = false;
-    if (this.condition) {
+    if (this.condition) { // /!\ It should probably be `this.condition()`
         var result = this._func.apply(this._this, this.__args__);
         this.__hot__ = true;
         clearTimeout(this.__timeout__);
